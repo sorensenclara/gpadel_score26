@@ -18,6 +18,7 @@ import uuid
 
 # Overlay para transmisiones (Larix): último estado completo del partido
 from django.core.cache import cache
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 LIVE_CACHE_KEY = "scoreboard_live_{code}"
 
@@ -35,12 +36,53 @@ def _live_state(match):
     return data
 
 
-def overlay(request, match):
+DEFAULT_EDITION = "4ta Edición"
+
+
+def _clean_label(value):
+    """'6ta-damas' / '6ta_damas' -> '6ta damas' (se muestra en mayúsculas por CSS)."""
+    return (value or "").replace("-", " ").replace("_", " ").strip()[:40]
+
+
+def overlay(request, match, category=""):
     """Versión overlay del marcador (fondo transparente) para Larix / OBS."""
+    category = _clean_label(request.GET.get("cat") or category)
+    edition = _clean_label(request.GET.get("ed")) or DEFAULT_EDITION
     return render(
         request,
         "scoreboard/overlay.html",
-        {"match": match, "initial_state": _live_state(match)},
+        {
+            "match": match,
+            "initial_state": _live_state(match),
+            "category": category,
+            "edition": edition,
+        },
+    )
+
+
+@xframe_options_sameorigin  # permite verlo dentro del simulador (mismo sitio)
+def overlay_page(request, code, category=""):
+    """
+    /overlay/<code>/  y  /overlay/<code>/<categoria>/
+    URL sin parámetros '?', más segura para cargar en Larix.
+    """
+    match = get_object_or_404(Match, code=code)
+    return overlay(request, match, category)
+
+
+def overlay_preview(request, code, category=""):
+    """Simulador 9:16 (1080x1920) del overlay sobre una cancha, para probar en la compu."""
+    match = get_object_or_404(Match, code=code)
+    overlay_url = f"/overlay/{match.code}/"
+    if category:
+        overlay_url += f"{category}/"
+    query = request.META.get("QUERY_STRING", "")
+    if query:
+        overlay_url += f"?{query}"
+    return render(
+        request,
+        "scoreboard/overlay_preview.html",
+        {"match": match, "overlay_url": overlay_url},
     )
 
 
