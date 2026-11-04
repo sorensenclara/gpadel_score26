@@ -16,6 +16,40 @@ from django.core.files.base import ContentFile
 import os
 import uuid
 
+# Overlay para transmisiones (Larix): último estado completo del partido
+from django.core.cache import cache
+
+LIVE_CACHE_KEY = "scoreboard_live_{code}"
+
+
+def _live_state(match):
+    """
+    Estado más reciente del partido para el overlay.
+    Usa el último payload enviado por el panel de control (incluye puntos del
+    game actual, que no se guardan en la base) y, si no hay, el de la base.
+    """
+    data = match.as_payload()
+    cached = cache.get(LIVE_CACHE_KEY.format(code=match.code))
+    if isinstance(cached, dict):
+        data.update(cached)
+    return data
+
+
+def overlay(request, match):
+    """Versión overlay del marcador (fondo transparente) para Larix / OBS."""
+    return render(
+        request,
+        "scoreboard/overlay.html",
+        {"match": match, "initial_state": _live_state(match)},
+    )
+
+
+@require_GET
+def live_state(request, code):
+    """Estado en vivo para el overlay (fallback por polling si cae el WebSocket)."""
+    match = get_object_or_404(Match, code=code)
+    return JsonResponse(_live_state(match))
+
 
 def index(request):
     return render(request, "scoreboard/index.html")
@@ -46,6 +80,11 @@ def choose_mode(request, code):
 def viewer(request, code):
     """Vista pública del marcador."""
     match = get_object_or_404(Match, code=code)
+
+    # /ver/<code>/?overlay=1 → versión overlay para transmisiones
+    if request.GET.get("overlay") == "1":
+        return overlay(request, match)
+
     qr_data_uri = None
     try:
         viewer_url = request.build_absolute_uri(f"/ver/{match.code}/")
@@ -181,6 +220,12 @@ def update_scores(request, code):
         out["finished"] = bool(finished)
         out["winner"] = winner or ""
         out["show_points"] = match.show_points
+
+        # Guardar último estado completo para el overlay (no toca la base)
+        try:
+            cache.set(LIVE_CACHE_KEY.format(code=match.code), out, None)
+        except Exception:
+            pass
 
         # Broadcast WebSocket
         layer = get_channel_layer()

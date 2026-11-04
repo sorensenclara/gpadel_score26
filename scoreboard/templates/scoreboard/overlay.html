@@ -1,0 +1,468 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Overlay {{ match.code }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap">
+  <!--
+    Overlay para transmisiones (Larix Broadcaster / OBS).
+    NO usa style.css: así no hereda el fondo azul ni los estilos globales.
+
+    Parámetros opcionales en la URL:
+      top=12     margen superior en % del alto (default 12, para la UI de Instagram)
+      side=4     margen lateral en % del ancho (default 4)
+      scale=1    tamaño del marcador (ej. 0.8 o 1.2)
+      logo=0     oculta el logo de la liga
+      pos=bottom ubica el marcador abajo en vez de arriba (usa "top" como margen inferior)
+  -->
+  <style>
+    :root {
+      --violet: #4c2079;
+      --violet-dark: #37165a;
+      --green: #008d3e;
+      --green-dark: #006b2f;
+      --cell: rgba(14, 10, 26, 0.86);
+      --cell-current: rgba(40, 28, 66, 0.92);
+      --muted: rgba(255, 255, 255, 0.55);
+      --top: 12;
+      --side: 4;
+      --scale: 1;
+    }
+
+    /* Transparencia total: nada de fondos de página */
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+      width: 100%;
+      min-height: 0;
+      height: auto;
+      overflow: visible;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Montserrat, -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+      -webkit-text-size-adjust: 100%;
+      /* Tamaño base proporcional al ancho del widget */
+      font-size: calc(3.7vw * var(--scale));
+    }
+
+    .ov {
+      width: 100%;
+      padding: calc(var(--top) * 1vh) calc(var(--side) * 1vw) 0;
+      background: transparent;
+    }
+    .ov.at-bottom {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 0 calc(var(--side) * 1vw) calc(var(--top) * 1vh);
+    }
+
+    /* ---------- Barra principal ---------- */
+    .sb {
+      display: flex;
+      align-items: stretch;
+      width: 100%;
+      max-width: 100%;
+      filter: drop-shadow(0 0.15em 0.35em rgba(0, 0, 0, 0.45));
+    }
+
+    .sb-logo {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 3.3em;
+      background: #fff;
+      border-radius: 0.35em 0 0 0.35em;
+      padding: 0.2em;
+    }
+    .sb-logo img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .no-logo .sb-logo { display: none; }
+
+    .sb-rows {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.12em;
+    }
+
+    .row {
+      display: flex;
+      align-items: stretch;
+      height: 1.65em;
+      line-height: 1;
+    }
+
+    .stripe {
+      flex: 0 0 0.3em;
+    }
+    .row.a .stripe { background: var(--violet); }
+    .row.b .stripe { background: var(--green); }
+    .no-logo .row.a .stripe { border-top-left-radius: 0.35em; }
+    .no-logo .row.b .stripe { border-bottom-left-radius: 0.35em; }
+
+    .name {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      padding: 0 0.5em;
+      background: var(--cell);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .name-text {
+      display: block;
+      white-space: nowrap;
+    }
+    .row.winner .name { color: #fff; }
+    .row.loser .name { color: rgba(255, 255, 255, 0.6); }
+    .win-mark {
+      display: none;
+      margin-left: 0.4em;
+      font-size: 0.8em;
+      color: #ffd34d;
+    }
+    .row.winner .win-mark { display: inline; }
+
+    .set {
+      flex: 0 0 1.55em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--cell);
+      font-weight: 700;
+      color: var(--muted);
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .set.current {
+      background: var(--cell-current);
+      color: #fff;
+    }
+    .set.won {
+      color: #fff;
+      font-weight: 800;
+    }
+    .set.hidden { display: none; }
+
+    .pts {
+      flex: 0 0 2.3em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #fff;
+      transition: background-color 0.25s ease;
+    }
+    .row.a .pts { background: var(--violet); }
+    .row.b .pts { background: var(--green); }
+    .row.a .pts.flash { background: #7a3fc0; }
+    .row.b .pts.flash { background: #13c45f; }
+    .row.a .pts { border-top-right-radius: 0.35em; }
+    .row.b .pts { border-bottom-right-radius: 0.35em; }
+    .pts-hidden .pts { display: none; }
+    .pts-hidden .row.a .set.end { border-top-right-radius: 0.35em; }
+    .pts-hidden .row.b .set.end { border-bottom-right-radius: 0.35em; }
+
+    /* ---------- Etiqueta de estado (SET 2 / TIE-BREAK / FINAL) ---------- */
+    .tag-row {
+      display: flex;
+      justify-content: flex-start;
+      margin-top: 0.12em;
+      padding-left: 3.3em;
+    }
+    .no-logo .tag-row { padding-left: 0; }
+    .tag {
+      display: inline-block;
+      padding: 0.22em 0.6em;
+      font-size: 0.55em;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #fff;
+      background: var(--violet-dark);
+      border-radius: 0 0 0.45em 0.45em;
+    }
+    .tag.tb { background: #b8860b; }
+    .tag.final { background: var(--green-dark); }
+
+    /* Pantallas anchas (widget horizontal): limitar el tamaño */
+    @media (min-aspect-ratio: 1/1) {
+      body { font-size: calc(2.2vw * var(--scale)); }
+      .sb, .tag-row { max-width: 34em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ov" id="ov">
+    <div class="sb">
+      <div class="sb-logo">
+        <img src="{% static 'brand/logo-liga.png' %}" alt="Liga de Pádel San Cayetano">
+      </div>
+
+      <div class="sb-rows">
+        <div class="row a" id="rowA">
+          <span class="stripe"></span>
+          <div class="name"><span class="name-text" id="nameA">{{ match.team_a }}</span><span class="win-mark">&#9650;</span></div>
+          <div class="set" id="s1a">{{ match.set1_a }}</div>
+          <div class="set" id="s2a">{{ match.set2_a }}</div>
+          <div class="set" id="s3a">{{ match.set3_a }}</div>
+          <div class="pts" id="ptsA">0</div>
+        </div>
+        <div class="row b" id="rowB">
+          <span class="stripe"></span>
+          <div class="name"><span class="name-text" id="nameB">{{ match.team_b }}</span><span class="win-mark">&#9650;</span></div>
+          <div class="set" id="s1b">{{ match.set1_b }}</div>
+          <div class="set" id="s2b">{{ match.set2_b }}</div>
+          <div class="set" id="s3b">{{ match.set3_b }}</div>
+          <div class="pts" id="ptsB">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tag-row">
+      <span class="tag" id="tag">SET 1</span>
+    </div>
+  </div>
+
+  {{ initial_state|json_script:"initial-state" }}
+
+<script>
+(function () {
+  "use strict";
+
+  var code = "{{ match.code|escapejs }}";
+  var root = document.documentElement;
+  var ov = document.getElementById("ov");
+
+  /* ---------- Parámetros de la URL ---------- */
+  var params = {};
+  location.search.replace(/^\?/, "").split("&").forEach(function (kv) {
+    if (!kv) return;
+    var p = kv.split("=");
+    params[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || "");
+  });
+  function num(v, def, min, max) {
+    var n = parseFloat(v);
+    if (isNaN(n)) return def;
+    return Math.min(max, Math.max(min, n));
+  }
+  root.style.setProperty("--top", num(params.top, 12, 0, 60));
+  root.style.setProperty("--side", num(params.side, 4, 0, 30));
+  root.style.setProperty("--scale", num(params.scale, 1, 0.4, 2.5));
+  if (params.logo === "0") document.body.classList.add("no-logo");
+  if (params.pos === "bottom") ov.classList.add("at-bottom");
+
+  /* ---------- Estado ---------- */
+  var state = {};
+  try {
+    state = JSON.parse(document.getElementById("initial-state").textContent) || {};
+  } catch (e) { state = {}; }
+
+  var lastPtsA = null;
+  var lastPtsB = null;
+
+  function $(id) { return document.getElementById(id); }
+
+  function isHidden(v) {
+    return v === false || v === 0 || v === "0";
+  }
+
+  function isSetWon(a, b) {
+    if ((a >= 6 || b >= 6) && Math.abs(a - b) >= 2) return true;
+    if ((a === 7 && b === 6) || (a === 6 && b === 7)) return true;
+    return false;
+  }
+
+  function toInt(v) {
+    var n = parseInt(v, 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function flash(el) {
+    el.classList.add("flash");
+    setTimeout(function () { el.classList.remove("flash"); }, 500);
+  }
+
+  /* Achica el texto del nombre hasta que entre (sin recortar) */
+  function fitName(el) {
+    el.style.fontSize = "";
+    var box = el.parentNode;
+    var cs = window.getComputedStyle(box);
+    var mark = box.querySelector(".win-mark");
+    var avail = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      - (mark && mark.offsetWidth ? mark.offsetWidth + 6 : 0);
+    var size = 1;
+    while (el.offsetWidth > avail && size > 0.55) {
+      size -= 0.05;
+      el.style.fontSize = size + "em";
+    }
+  }
+
+  function render() {
+    var s = state;
+
+    var ta = s.team_a || "Equipo A";
+    var tb = s.team_b || "Equipo B";
+    $("nameA").textContent = ta;
+    $("nameB").textContent = tb;
+
+    var sets = Array.isArray(s.sets) ? s.sets : [
+      { a: s.set1_a, b: s.set1_b },
+      { a: s.set2_a, b: s.set2_b },
+      { a: s.set3_a, b: s.set3_b }
+    ];
+    var current = toInt(s.current_set) || 1;
+    var finished = !!s.finished;
+
+    var lastShown = 1;
+    for (var i = 1; i <= 3; i++) {
+      var set = sets[i - 1] || {};
+      var a = toInt(set.a), b = toInt(set.b);
+      var ca = $("s" + i + "a"), cb = $("s" + i + "b");
+      ca.textContent = a;
+      cb.textContent = b;
+
+      // Mostrar sólo sets jugados o en juego
+      var show = i <= current || a > 0 || b > 0;
+      ca.classList.toggle("hidden", !show);
+      cb.classList.toggle("hidden", !show);
+      if (show) lastShown = i;
+
+      var isCurrent = !finished && i === current;
+      ca.classList.toggle("current", isCurrent);
+      cb.classList.toggle("current", isCurrent);
+
+      var won = isSetWon(a, b);
+      ca.classList.toggle("won", won && a > b);
+      cb.classList.toggle("won", won && b > a);
+    }
+
+    for (var j = 1; j <= 3; j++) {
+      $("s" + j + "a").classList.toggle("end", j === lastShown);
+      $("s" + j + "b").classList.toggle("end", j === lastShown);
+    }
+
+    // Puntos del game actual
+    var cg = s.current_game || { mode: "regular", a: 0, b: 0 };
+    var hidePts = finished || isHidden(s.show_points) || isHidden(s.showPoints);
+    document.body.classList.toggle("pts-hidden", hidePts);
+
+    var pa = (cg.a === undefined || cg.a === null) ? 0 : cg.a;
+    var pb = (cg.b === undefined || cg.b === null) ? 0 : cg.b;
+    $("ptsA").textContent = pa;
+    $("ptsB").textContent = pb;
+    if (lastPtsA !== null && String(pa) !== String(lastPtsA)) flash($("ptsA"));
+    if (lastPtsB !== null && String(pb) !== String(lastPtsB)) flash($("ptsB"));
+    lastPtsA = pa;
+    lastPtsB = pb;
+
+    // Ganador
+    var rowA = $("rowA"), rowB = $("rowB");
+    var winner = finished ? (s.winner || "") : "";
+    var aWins = finished && winner && winner === ta;
+    var bWins = finished && winner && winner === tb;
+    rowA.classList.toggle("winner", !!aWins);
+    rowB.classList.toggle("winner", !!bWins);
+    rowA.classList.toggle("loser", !!bWins);
+    rowB.classList.toggle("loser", !!aWins);
+
+    // Etiqueta de estado
+    var tag = $("tag");
+    var text = "SET " + current;
+    var cls = "tag";
+    if (cg.mode === "tiebreak") { text = "TIE-BREAK · SET " + current; cls += " tb"; }
+    if (cg.mode === "super_tb") { text = "SUPER TIE-BREAK"; cls += " tb"; }
+    if (finished) { text = "FINAL"; cls += " final"; }
+    tag.textContent = text;
+    tag.className = cls;
+
+    fitName($("nameA"));
+    fitName($("nameB"));
+  }
+
+  function merge(data) {
+    if (!data || typeof data !== "object" || data.error) return;
+    for (var k in data) {
+      if (Object.prototype.hasOwnProperty.call(data, k)) state[k] = data[k];
+    }
+    render();
+  }
+
+  /* ---------- Tiempo real: WebSocket existente + polling de respaldo ---------- */
+  var socket = null;
+  var pollTimer = null;
+
+  function poll() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/api/" + encodeURIComponent(code) + "/live/?t=" + Date.now(), true);
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        try { merge(JSON.parse(xhr.responseText)); } catch (e) {}
+      }
+    };
+    xhr.send();
+  }
+
+  function startPolling() {
+    if (!pollTimer) pollTimer = setInterval(poll, 3000);
+  }
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  function connect() {
+    var proto = location.protocol === "https:" ? "wss" : "ws";
+    try {
+      socket = new WebSocket(proto + "://" + location.host + "/ws/match/" + code + "/");
+    } catch (e) {
+      startPolling();
+      setTimeout(connect, 5000);
+      return;
+    }
+    socket.onopen = function () {
+      stopPolling();
+      poll(); // trae puntos del game actual
+    };
+    socket.onmessage = function (ev) {
+      try {
+        var raw = JSON.parse(ev.data);
+        merge(raw.payload || raw);
+      } catch (e) {}
+    };
+    socket.onclose = function () {
+      startPolling();
+      setTimeout(connect, 3000);
+    };
+    socket.onerror = function () {
+      try { socket.close(); } catch (e) {}
+    };
+  }
+
+  window.addEventListener("resize", render);
+  render();
+  connect();
+  // Re-ajustar cuando cargue la tipografía
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>
