@@ -1,9 +1,14 @@
 services:
   - type: web
-    name: padelboard2026
+    name: gpadel-score26
     runtime: python
-    buildCommand: "./build.sh"
+    plan: free
+    buildCommand: "bash build.sh"
     startCommand: "daphne padelboard.asgi:application -b 0.0.0.0 -p $PORT"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
