@@ -29,10 +29,11 @@ class OverlayTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, "scoreboard/overlay.html")
         html = resp.content.decode()
-        self.assertIn("background: transparent !important", html)
         self.assertIn('name="viewport"', html)
-        self.assertNotIn("css/style.css", html)  # no hereda el fondo azul
+        self.assertIn("css/overlay", html)
+        self.assertNotIn("css/style", html)  # no hereda el fondo azul de la vista pública
         self.assertIn("Pérez / Gómez", html)
+        self.assertIn("4ta Edición", html)
 
     def test_overlay_otro_valor_muestra_vista_normal(self):
         resp = self.client.get("/ver/6tadamas/?overlay=0")
@@ -76,3 +77,37 @@ class OverlayTests(TestCase):
         state = self.client.get("/api/6tadamas/state/").json()
         self.assertNotIn("current_game", state)
         self.assertEqual(self.client.get("/ver/6tadamas/").status_code, 200)
+
+
+class OverlayUrlTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        Match.objects.create(code="6tadamas", team_a="Pérez / Gómez", team_b="López / Díaz")
+
+    def test_url_sin_query(self):
+        resp = self.client.get("/overlay/6tadamas/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, "scoreboard/overlay.html")
+
+    def test_categoria_en_la_url(self):
+        resp = self.client.get("/overlay/6tadamas/6ta-damas/")
+        self.assertContains(resp, '<span class="cat" id="cat">6ta damas</span>', html=False)
+
+    def test_categoria_y_edicion_por_parametro(self):
+        resp = self.client.get("/overlay/6tadamas/?cat=7ma+Caballeros&ed=5ta+Edición")
+        self.assertContains(resp, "7ma Caballeros")
+        self.assertContains(resp, "5ta Edición")
+
+    def test_preview(self):
+        resp = self.client.get("/overlay/6tadamas/6ta-damas/preview/?top=200")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'src="/overlay/6tadamas/6ta-damas/?top=200"')
+
+    def test_overlay_inexistente_404(self):
+        self.assertEqual(self.client.get("/overlay/noexiste/").status_code, 404)
+
+    def test_css_overlay_transparente(self):
+        from django.contrib.staticfiles import finders
+        css = open(finders.find("css/overlay.css"), encoding="utf-8").read()
+        self.assertIn("background: transparent !important", css)
+        self.assertNotIn("bg-azul", css)

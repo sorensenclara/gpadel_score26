@@ -1,0 +1,354 @@
+/* ============================================================
+   OVERLAY.CSS — Marcador para transmisiones (Larix / Instagram Live)
+   Independiente de style.css (la vista pública no se toca).
+
+   Diseñado sobre un lienzo vertical de 1080 × 1920.
+   1rem = 10 px del lienzo: todo escala con el ANCHO del widget,
+   así el marcador ocupa siempre el 90% del ancho, sin zoom ni recortes.
+   ============================================================ */
+
+:root {
+  --green: #008d3e;
+  --green-light: #12a650;
+  --green-dark: #00632b;
+  --green-deep: #003d1b;
+  --violet: #4c2079;
+  --cell: rgba(4, 28, 14, 0.9);
+  --cell-head: rgba(0, 61, 27, 0.94);
+  --white: #ffffff;
+  --muted: rgba(255, 255, 255, 0.45);
+  --scale: 1;
+  --top: 190;   /* margen superior en px del lienzo 1920 (zona UI de Instagram) */
+}
+
+/* ---------- Documento 100% transparente ---------- */
+html,
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+html {
+  /* 1080 px de lienzo = 108rem  →  1rem = 10 px del lienzo */
+  font-size: calc(100vw / 108 * var(--scale));
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Montserrat, -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--white);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1;
+}
+
+/* ---------- Contenedor ---------- */
+.ov {
+  width: 100%;
+  padding-top: calc(var(--top) * 0.1rem);
+  background: transparent;
+}
+
+.ov.at-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-top: 0;
+  padding-bottom: calc(var(--top) * 0.1rem);
+}
+
+.board {
+  width: 97.2rem;           /* 90% de 1080 */
+  max-width: 90vw;
+  margin: 0 auto;
+  border-radius: 2.4rem;
+  box-shadow: 0 0.8rem 2.4rem rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- Encabezado: logo + edición + categoría + estado ---------- */
+.hdr {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  min-height: 13rem;
+  padding: 1.6rem 2.4rem 1.6rem 1.6rem;
+  background: linear-gradient(90deg, var(--green-dark) 0%, var(--green) 55%, var(--green-light) 100%);
+  border-radius: 2.4rem 2.4rem 0 0;
+}
+
+.logo {
+  flex: 0 0 auto;
+  width: 11rem;
+  height: 11rem;
+  border-radius: 50%;
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  box-shadow: 0 0.3rem 0.8rem rgba(0, 0, 0, 0.3);
+}
+
+.logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.hdr-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.league {
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.edition-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+}
+
+.edition {
+  font-size: 4.6rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.cat {
+  display: inline-block;
+  padding: 0.8rem 1.6rem;
+  border-radius: 1rem;
+  background: var(--white);
+  color: var(--green-dark);
+  font-size: 3.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cat:empty {
+  display: none;
+}
+
+.status {
+  flex: 0 0 auto;
+  padding: 1.1rem 1.8rem;
+  border-radius: 1rem;
+  background: var(--green-deep);
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status.tb {
+  background: #c88a00;
+}
+
+.status.final {
+  background: var(--white);
+  color: var(--green-dark);
+}
+
+/* ---------- Tabla de resultados ---------- */
+.grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.r {
+  display: flex;
+  align-items: stretch;
+}
+
+.c-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.c-set {
+  flex: 0 0 11rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.c-pts {
+  flex: 0 0 15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Fila de títulos: S1 S2 S3 PTS */
+.r.head {
+  background: var(--cell-head);
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.r.head > div {
+  padding: 1rem 0;
+}
+
+.r.head .c-name {
+  padding-left: 3.6rem;
+  text-align: left;
+}
+
+.r.head .c-set.current {
+  color: var(--white);
+}
+
+/* Filas de parejas */
+.r.team {
+  min-height: 15rem;
+  background: var(--cell);
+  border-top: 0.3rem solid rgba(255, 255, 255, 0.08);
+}
+
+.r.team .stripe {
+  flex: 0 0 1.4rem;
+}
+
+.r.team.a .stripe { background: var(--violet); }
+.r.team.b .stripe { background: var(--green-light); }
+
+.r.team .c-name {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1.6rem 2rem;
+}
+
+.player {
+  display: block;
+  font-size: 5rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.player.wrap {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.05;
+}
+
+.r.team.loser .player {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.win-mark {
+  display: none;
+  color: #ffd34d;
+  margin-left: 1rem;
+}
+
+.r.team.winner .player:last-child .win-mark {
+  display: inline;
+}
+
+.r.team .c-set {
+  font-size: 7rem;
+  font-weight: 800;
+  color: var(--muted);
+  border-left: 0.3rem solid rgba(255, 255, 255, 0.08);
+}
+
+.r.team .c-set.played {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.r.team .c-set.won {
+  color: var(--white);
+}
+
+.r.team .c-set.current {
+  background: var(--white);
+  color: var(--green-dark);
+  border-left-color: var(--white);
+}
+
+.r.team .c-pts {
+  font-size: 7.4rem;
+  font-weight: 800;
+  background: var(--green);
+  color: var(--white);
+  transition: background-color 0.3s ease;
+}
+
+.r.team .c-pts.flash {
+  background: var(--green-light);
+}
+
+.r.team.b .c-pts {
+  background: var(--green-dark);
+}
+
+.r.team.b .c-pts.flash {
+  background: var(--green-light);
+}
+
+/* Bordes redondeados de abajo */
+.r.team.b {
+  border-radius: 0 0 2.4rem 2.4rem;
+}
+
+.r.team.b .stripe {
+  border-bottom-left-radius: 2.4rem;
+}
+
+.r.team.b > :last-child {
+  border-bottom-right-radius: 2.4rem;
+}
+
+/* Ocultar puntos (switch del panel apagado o partido terminado) */
+.pts-hidden .c-pts {
+  display: none;
+}
+
+/* ---------- Opciones ---------- */
+.no-logo .logo {
+  display: none;
+}
+
+.no-league .league {
+  display: none;
+}
+
+.pts-hidden .r.team.b .c-set:nth-last-child(2) {
+  border-bottom-right-radius: 2.4rem;
+}
